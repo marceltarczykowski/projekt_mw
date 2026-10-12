@@ -6,3 +6,6 @@ from fastapi import FastAPI
 app=FastAPI()
 
 
+def get_conn():
+    return psycopg.connect(os.environ["DATABASE_URL"], row_factory=dict_row)
+
