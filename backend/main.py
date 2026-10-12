@@ -18,3 +18,8 @@ def init_db():
             conn.execute("INSERT INTO events (name) VALUES ('Koncert'), ('Seans filmowy')")
 
 
+@app.get("/events")
+def list_events():
+    with get_conn() as conn:
+        return conn.execute("SELECT id, name FROM events").fetchall()
+    
