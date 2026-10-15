@@ -10,4 +10,7 @@ services:
     build: ./backend
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-   
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
