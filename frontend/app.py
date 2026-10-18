@@ -5,7 +5,7 @@ import os
 streamlit.title("Rezerwacja biletów")
 
 try:
-    response = requests.get(os.environ["BACXKEND_URL"] + "/events", timeout = 5)
+    response = requests.get(os.environ["BACKEND_URL"] + "/events", timeout = 5)
     response.raise_for_status()   
     dane_json = response.json()
 
