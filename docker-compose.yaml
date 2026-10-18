@@ -14,3 +14,13 @@ services:
       - db
     ports:
       - "8000:8000"
+      
+  rontend:
+    build: ./frontend
+    environment:
+      - BACKEND_URL: http://backend:8000
+    depends_on:
+      - backend
+    ports:
+      -"5000:5000"
+  
