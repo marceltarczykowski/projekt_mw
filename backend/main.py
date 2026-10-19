@@ -19,7 +19,7 @@ def init_db():
 
 
 @app.get("/events")
-def list_events():
+def pokaz_wydarzenia():
     with get_conn() as conn:
         return conn.execute("SELECT id, name FROM events").fetchall()
     
