@@ -1,10 +1,9 @@
 import os
 import psycopg
 from psycopg.rows import dict_row
-from fastapi import FastAPI,HTTPException
+from fastapi import FastAPI,HTTPException,status
 
 app=FastAPI()
-
 
 def get_conn():
     return psycopg.connect(os.environ["DATABASE_URL"], row_factory=dict_row)
@@ -52,6 +51,51 @@ def pokaz_wydarzenia():
     with get_conn() as conn:
         return conn.execute("SELECT id, name FROM events").fetchall()
 
+@app.get("/reservations") #lista zasobów
+def pokaz_rezerwacje():
+    query = """
+        SELECT reservations.id, reservations.email, reservations.created_at, seats.label, events.name
+        FROM reservations
+        JOIN seats ON reservations.seat_id = seats.id
+        JOIN events ON seats.event_id = events.id
+        ORDER BY reservations.id ASC
+    """
+    with get_conn() as conn:
+        return conn.execute(query).fetchall()
+
+@app.post("/reservations")
+def stworz_rezerwacje(dane: dict):
+    if "seat.id" not in dane or "email" not in dane:
+        raise HTTPException(status_code=400, detail = "Brak wymaganych pól: seat_id oraz email")
+    
+    seat_id = dane["seat_id"]
+    email = dane["email"]
+
+    if not isinstance(seat_id, int):
+        raise HTTPException(status_code=400, detail = "Pole seat_id musi być liczbą całkowitą")
+
+    if not isinstance(email, str) or "@" not in email or "." not in email:
+        raise HTTPException(status_code=400, detail="Niepoprawny format adresu e-mail")
+
+    with get_conn() as conn:
+        seat = conn.execute(
+            "SELECT seats.id FROM seats WHERE seats.id = %s", (seat_id,)).fetchone()
+
+        if seat is None:
+            raise HTTPException(status_code=404, detail="Miejsce o podanym ID nie istnieje")
+
+    istniejaca_rezerwacja = conn.execute("SELECT reservations.id FROM reservations WHERE reservations.seat_id = %s",(seat_id,)).fetchone()
+
+    if istniejaca_rezerwacja is not None:
+        raise HTTPException(status_code = 400, detail="To miejsce jest juz zarezerwowane")
+
+    nowa_rezerwacja = conn.execute("""
+            INSERT INTO reservations (seat_id, email)
+            VALUES (%s, %s) RETURNING reservations.id, reservations.seat_id, reservations.email, reservations.created_at
+            """, (seat_id, email)
+        ).fetchone()
+
+    return nowa_rezerwacja
 
 @app.get("/health")
 def health():
