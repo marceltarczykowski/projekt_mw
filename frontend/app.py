@@ -1,16 +1,16 @@
-import streamlit
+import streamlit as st
 import requests
 import os
 
-streamlit.title("Rezerwacja biletów")
+st.title("Rezerwacja biletów")
 
 try:
     response = requests.get(os.environ["BACKEND_URL"] + "/events", timeout = 5)
     response.raise_for_status()   
 
-    streamlit.table(response.json())
-        
+    st.table(response.json())
+    event = st.selectbox("Wydarzenie", response.json(), format_func=lambda e: e["name"]) 
     
 except requests.exceptions.RequestException as e:
-    streamlit.error(f"Błąd połączenia: Nie udało się pobrać danych z backendu.\nSzczegóły: {e}")
+    st.error(f"Błąd połączenia: Nie udało się pobrać danych z backendu.\nSzczegóły: {e}")
     
