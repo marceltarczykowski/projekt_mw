@@ -31,10 +31,21 @@ CREATE TABLE IF NOT EXISTS reservations (
 @app.on_event("startup")
 def init_db():
     with get_conn() as conn:
-        conn.execute("CREATE TABLE IF NOT EXISTS events (id SERIAL PRIMARY KEY, name TEXT)")
+        conn.execute(SCHEMA)
         if conn.execute("SELECT COUNT(*) AS n FROM events").fetchone()["n"] == 0:
-            conn.execute("INSERT INTO events (name) VALUES ('Koncert'), ('Seans filmowy')")
+            events_to_create = ["Koncert", "Seans filmowy"]
+            for event_name in events_to_create:
+                event_id = conn.execute(
+                    "INSERT INTO events (name) VALUES (%s) RETURNING id",
+                    (event_name,)
+                ).fetchone()["id"]
 
+                for row in "AB":
+                    for number in range(1, 6):
+                        conn.execute(
+                            "INSERT INTO seats (event_id, label) VALUES (%s, %s)",
+                            (event_id, f"{row}{number}"),
+                        )
 
 @app.get("/events")
 def pokaz_wydarzenia():
