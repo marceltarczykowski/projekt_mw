@@ -51,6 +51,25 @@ def pokaz_wydarzenia():
     with get_conn() as conn:
         return conn.execute("SELECT id, name FROM events").fetchall()
 
+
+@app.get("/events/{event_id}/seats")
+def list_seats(event_id: int):
+    with get_conn() as conn:
+        if not conn.execute("SELECT 1 FROM events WHERE id = %s", (event_id,)).fetchone():
+            raise HTTPException(404, "Event not found")
+        return conn.execute(
+            """
+            SELECT s.id, s.label, (r.id IS NOT NULL) AS reserved
+            FROM seats s
+            LEFT JOIN reservations r ON r.seat_id = s.id
+            WHERE s.event_id = %s
+            ORDER BY s.id
+            """,
+            (event_id,),
+        ).fetchall()
+
+
+
 @app.get("/reservations") #lista zasobów
 def pokaz_rezerwacje():
     query = """
@@ -63,39 +82,38 @@ def pokaz_rezerwacje():
     with get_conn() as conn:
         return conn.execute(query).fetchall()
 
-@app.post("/reservations")
+@app.post("/reservations", status_code=201)
 def stworz_rezerwacje(dane: dict):
-    if "seat.id" not in dane or "email" not in dane:
-        raise HTTPException(status_code=400, detail = "Brak wymaganych pól: seat_id oraz email")
-    
+    if "seat_id" not in dane or "email" not in dane:
+        raise HTTPException(status_code=400, detail="Brak wymaganych pól: seat_id oraz email")
+
     seat_id = dane["seat_id"]
     email = dane["email"]
 
     if not isinstance(seat_id, int):
-        raise HTTPException(status_code=400, detail = "Pole seat_id musi być liczbą całkowitą")
+        raise HTTPException(status_code=400, detail="Pole seat_id musi być liczbą całkowitą")
 
     if not isinstance(email, str) or "@" not in email or "." not in email:
         raise HTTPException(status_code=400, detail="Niepoprawny format adresu e-mail")
 
     with get_conn() as conn:
-        seat = conn.execute(
-            "SELECT seats.id FROM seats WHERE seats.id = %s", (seat_id,)).fetchone()
-
+        seat = conn.execute("SELECT id FROM seats WHERE id = %s", (seat_id,)).fetchone()
         if seat is None:
             raise HTTPException(status_code=404, detail="Miejsce o podanym ID nie istnieje")
 
-    istniejaca_rezerwacja = conn.execute("SELECT reservations.id FROM reservations WHERE reservations.seat_id = %s",(seat_id,)).fetchone()
-
-    if istniejaca_rezerwacja is not None:
-        raise HTTPException(status_code = 400, detail="To miejsce jest juz zarezerwowane")
-
-    nowa_rezerwacja = conn.execute("""
-            INSERT INTO reservations (seat_id, email)
-            VALUES (%s, %s) RETURNING reservations.id, reservations.seat_id, reservations.email, reservations.created_at
-            """, (seat_id, email)
+        istniejaca_rezerwacja = conn.execute(
+            "SELECT id FROM reservations WHERE seat_id = %s", (seat_id,)
         ).fetchone()
+        if istniejaca_rezerwacja is not None:
+            raise HTTPException(status_code=409, detail="To miejsce jest już zarezerwowane")
 
-    return nowa_rezerwacja
+        
+        return conn.execute(
+            "INSERT INTO reservations (seat_id, email) VALUES (%s, %s) "
+            "RETURNING id, seat_id, email, created_at",
+            (seat_id, email),
+        ).fetchone()
+        
 
 @app.get("/health")
 def health():
