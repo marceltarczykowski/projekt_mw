@@ -53,7 +53,7 @@ def pokaz_wydarzenia():
 
 
 @app.get("/events/{event_id}/seats")
-def list_seats(event_id: int):
+def pokaz_miejsca(event_id: int):
     with get_conn() as conn:
         if not conn.execute("SELECT 1 FROM events WHERE id = %s", (event_id,)).fetchone():
             raise HTTPException(404, "Event not found")
