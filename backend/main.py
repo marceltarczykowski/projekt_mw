@@ -114,7 +114,7 @@ def stworz_rezerwacje(dane: dict):
             (seat_id, email),
         ).fetchone()
         
-@app.get("/reservations/{reservations_id}") #pojedynczy zasób
+@app.get("/reservations/{reservation_id}") #pojedynczy zasób
 def pobierz_id_rezerwacji(reservation_id: int):
     query = """
         SELECT reservations.id, reservations.email, reservations.created_at, seats.label, events.name
