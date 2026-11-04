@@ -114,6 +114,39 @@ def stworz_rezerwacje(dane: dict):
             (seat_id, email),
         ).fetchone()
         
+@app.get("/reservations/{reservations_id}") #pojedynczy zasób
+def pobierz_id_rezerwacji(reservation_id: int):
+    query = """
+        SELECT reservations.id, reservations.email, reservations.created_at, seats.label, events.name
+        FROM reservations
+        JOIN seats ON reservations.seat_id = seats.id
+        JOIN events ON seats.event_id = events.id
+        WHERE reservations.id = %s
+    """
+    with get_conn() as conn:
+        rezerwacja = conn.execute(query, (reservation_id,)).fetchone()
+        if rezerwacja is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Rezerwacja o podanym ID nie istnieje"
+            )
+        return rezerwacja
+
+@app.delete("/reservations/{reservation_id}")
+def usun_rezerwacje(reservation_id: int):
+    with get_conn() as conn:
+        cursor = conn.execute(
+            "DELETE FROM reservations WHERE id = %s",
+            (reservation_id,)
+        )
+
+        if cursor.rowcount == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Rezerwacja o podanym ID nie istnieje"
+            )
+
+        return {"message": "Rezerwacja została usunięta", "id": reservation_id}
 
 @app.get("/health")
 def health():
